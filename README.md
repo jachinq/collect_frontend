@@ -4,6 +4,17 @@ This is the frontend of the Collect project.
 
 You can use this project to record the websites you are interested in.
 
+## Features
+
+- Record the websites you are interested in.
+- View the recorded websites in a table.
+- View the recorded websites in a card.
+- View the recorded websites in a dataset.
+- Filter the recorded websites.
+- View the recorded websites in a responsive layout.
+- Switch between light and dark themes.
+- Sync the recorded websites with a WebDAV server.
+
 ## Requirements
 
 - Node.js 16+
