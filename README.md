@@ -22,14 +22,14 @@ You can use this project to record the websites you are interested in.
 
 ## Dependencies
 
-- React
-- zustand
-- radix-ui
-- Shadcn
-- Tailwind CSS
-- Typescript
-- Rsbuild
-- webdav
+- [React](https://react.dev/)
+- [zustand](https://github.com/pmndrs/zustand)
+- [radix-ui](https://www.radix-ui.com/)
+- [Shadcn](https://ui.shadcn.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Typescript](https://www.typescriptlang.org/)
+- [Rsbuild](https://rsbuild.dev/)
+- [webdav](https://www.npmjs.com/package/webdav)
 
 ## Setup
 
