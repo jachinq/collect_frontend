@@ -41,15 +41,15 @@ const clientOptions: ClientOptions = {
 
 const buildClient = ({ url, user, pwd }: ClientOptions): any | null => {
   if (!url) {
-    console.error("url is null or undefined");
+    // console.error("url is null or undefined");
     return null;
   }
   if (!user) {
-    console.error("user is null or undefined");
+    // console.error("user is null or undefined");
     return null;
   }
   if (!pwd) {
-    console.error("pwd is null or undefined");
+    // console.error("pwd is null or undefined");
     return null;
   }
   url = getFinalUrl();
@@ -68,7 +68,7 @@ const buildClient = ({ url, user, pwd }: ClientOptions): any | null => {
 // 测试连接
 const testConnection = async (client: any | null): Promise<boolean> => {
   if (!client) {
-    console.log("client is null or undefined");
+    // console.log("client is null or undefined");
     return false;
   }
   return await client.exists("/");

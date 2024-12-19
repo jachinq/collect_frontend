@@ -1,13 +1,22 @@
 import { Button, ButtonProps } from "./ui/button";
 import { BookmarkPlusIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input"
 import React, { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Popover, PopoverContent, PopoverClose, PopoverTrigger, } from "@/components/ui/popover"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { toast } from "sonner";
+import { DialogDescription } from "@radix-ui/react-dialog";
+import usePage from "@/store/page";
+import { Collect, DEFAULT_COLLECT } from "@/const/def";
+import useSyncList from "@/store/syncList";
 
 interface Config {
   title: string
@@ -23,27 +32,30 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
     collect?: Collect
   }) => {
 
-  const { delPageItem } = usePage();
+  const { delPageItem, setPageItem } = usePage();
   const { addSyncTask } = useSyncList();
 
   if (isDel) {
-    const onDel = () => {
+    const onDel = (collect: any) => {
       const result = delPageItem(collect);
-      if (result === "del") {
+      if (result.success) {
         addSyncTask(collect || {});
-        toast({
-          title: "Success",
-          description: "删除成功",
+        toast.success("删除成功", {
+          duration: 10000,
+          action: {
+            label: "Undo",
+            onClick: () => {
+              console.log('Undo delete collect', 'index=', result.data, 'delete item=', collect);
+              setPageItem(collect, result.data);
+              addSyncTask(collect);
+            }
+          }
         });
       } else {
-        toast({
-          title: "Error",
-          description: <>
-          <p>{"删除失败，" + result}</p>
-          <pre>
-            <code>{JSON.stringify(collect, null, 2)}</code>
+        toast.error("删除失败", {
+          description: <pre className="whitespace-pre-wrap">
+            {JSON.stringify(collect, null, 2)}
           </pre>
-          </>,
         });
       }
     }
@@ -57,7 +69,7 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
           <PopoverClose asChild>
             <div>
               <Button variant="secondary" className='mr-2'>取消</Button>
-              <Button variant="destructive" onClick={onDel}>确定</Button>
+              <Button variant="destructive" onClick={() => onDel(collect)}>确定</Button>
             </div>
           </PopoverClose>
         </div>
@@ -102,17 +114,6 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
 }
 
 
-// "use client"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { toast } from "@/hooks/use-toast";
-import { DialogDescription } from "@radix-ui/react-dialog";
-import usePage from "@/store/page";
-import { Collect, DEFAULT_COLLECT } from "@/const/def";
-import useSyncList from "@/store/syncList";
-
 const formSchema = z.object({
   name: z.string().nonempty({ message: "请输入名称" })
     .max(150, { message: "名称不能超过150个字符" }),
@@ -147,6 +148,7 @@ export const ProfileForm = ({ className, collect, setOpen }: React.ComponentProp
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     defaultValues: {
+      ...DEFAULT_COLLECT,
       ...collect,
       tags: collect?.tags.join("\n")
     },
@@ -165,15 +167,10 @@ export const ProfileForm = ({ className, collect, setOpen }: React.ComponentProp
       saveData.id = maxId + 1;
     }
     console.log(saveData);
-    toast({
-      title: "Data saved:",
-      description: (
-        <pre>
-          <code>
-            {JSON.stringify(saveData, null, 2)}
-          </code>
-        </pre>
-      ),
+    toast.success("Collect saved:", {
+      description: <pre className="whitespace-pre-wrap">
+        {JSON.stringify(saveData, null, 2)}
+      </pre>
     })
 
     setPageItem(saveData)
@@ -198,9 +195,7 @@ export const ProfileForm = ({ className, collect, setOpen }: React.ComponentProp
                 <Input {...field} />
               </FormControl>
               <FormMessage />
-            </FormItem>
-
-          )}
+            </FormItem>)}
         />
         <FormField
           control={form.control}

@@ -8,7 +8,14 @@ import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Popover, PopoverContent, PopoverClose, PopoverTrigger, } from "@/components/ui/popover"
-
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { toast } from "sonner";
+import { DialogDescription } from "@radix-ui/react-dialog";
+import useDataset, { Dataset, DEFAULT_DATASET } from "@/store/dataset";
+import useSyncList from "@/store/syncList";
 
 interface Config {
   title: string
@@ -16,10 +23,32 @@ interface Config {
 }
 
 export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HTMLAttributes<HTMLDivElement> & { edit?: boolean, dataset?: Dataset, isDel?: boolean }) => {
-  const { removeDataset } = useDataset();
+  const { removeDataset, setDataset } = useDataset();
   const { addSyncTask } = useSyncList();
 
   if (isDel) {
+
+    const onDel = (item: any) => {
+      const result = removeDataset(item);
+      console.log("del dataset", result);
+      if (result.success) {
+        addSyncTask(item);
+        toast.success("删除成功", {
+          duration: 10000,
+          action: {
+            label: "Undo",
+            onClick: () => {
+              console.log('Undo delete dataset', 'index=', result.data, 'delete item=', item);
+              setDataset(item, result.data);
+              addSyncTask(item);
+            }
+          },
+        });
+      } else {
+        toast.error("删除失败");
+      }
+    }
+
     return <Popover>
       <PopoverTrigger asChild>
         <Button variant="link" className="text-destructive p-1">
@@ -33,7 +62,7 @@ export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HT
           <PopoverClose asChild>
             <div>
               <Button variant="secondary" size="sm" className='mr-2'>取消</Button>
-              <Button variant="destructive" size="sm" onClick={() => {removeDataset(dataset); addSyncTask(dataset);}}>确定</Button>
+              <Button variant="destructive" size="sm" onClick={() => { onDel(dataset) }}>确定</Button>
             </div>
           </PopoverClose>
         </div>
@@ -88,17 +117,6 @@ export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HT
   )
 }
 
-
-// "use client"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { toast } from "@/hooks/use-toast";
-import { DialogDescription } from "@radix-ui/react-dialog";
-import useDataset, { Dataset } from "@/store/dataset";
-import useSyncList from "@/store/syncList";
-
 const formSchema = z.object({
   // id: z.string().nonempty({ message: "请输入id" }),
   name: z.string().nonempty({ message: "请输入名称" })
@@ -127,28 +145,24 @@ export const ProfileForm = ({ className, dataset, setOpen }:
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     defaultValues: {
+      ...DEFAULT_DATASET,
       ...dataset,
     },
   })
 
-  const onSubmit = (data: any) => {
-    const saveData = { ...dataset, ...data };
-    if (saveData?.id === null || saveData?.id === "" || saveData?.id === undefined
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    const saveData: Dataset = { ...DEFAULT_DATASET, ...dataset, ...data };
+    if (saveData?.id === null || saveData?.id === undefined
       || (saveData?.id && saveData?.id <= 0)) {
       // 找到最大id + 1
       const maxId = Math.max(...datasets.map(c => c.id)) || datasets.length;
       saveData.id = maxId + 1;
     }
 
-    toast({
-      title: "Data saved:",
-      description: (
-        <pre>
-          <code>
-            {JSON.stringify(saveData, null, 2)}
-          </code>
-        </pre>
-      ),
+    toast.success("Dataset saved", {
+      description: <pre className="whitespace-pre-wrap">
+        {JSON.stringify(saveData, null, 2)}
+      </pre>
     })
 
     setDataset(saveData);

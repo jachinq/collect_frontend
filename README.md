@@ -27,6 +27,7 @@ You can use this project to record the websites you are interested in.
 - [radix-ui](https://www.radix-ui.com/)
 - [Shadcn](https://ui.shadcn.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
+- [sonner](https://sonner.emilkowal.ski/)
 - [Typescript](https://www.typescriptlang.org/)
 - [Rsbuild](https://rsbuild.dev/)
 - [webdav](https://www.npmjs.com/package/webdav)

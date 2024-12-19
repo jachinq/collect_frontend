@@ -1,3 +1,4 @@
+import { Result } from "@/const/def";
 import { create } from "zustand";
 
 export const defaultDatasets: Dataset[] = [
@@ -28,11 +29,18 @@ export interface Dataset {
   filterText: string,
 };
 
+export const DEFAULT_DATASET = {
+  id: -1,
+  name: "",
+  description: "",
+  filterText: "",
+};
+
 interface DatasetState {
   dataset: Dataset,
   datasets: Dataset[],
-  setDataset: (dataset: Dataset) => string,
-  removeDataset: (dataset?: Dataset) => void,
+  setDataset: (dataset: Dataset, index?: number) => string,
+  removeDataset: (dataset?: Dataset) => Result,
   activeDataset: (dataset: Dataset) => void,
   saveDatasetLocal: (datasets: Dataset[]) => void,
 }
@@ -43,9 +51,21 @@ const initialDataset: Dataset = initialDatasets[datasetIndex] || initialDatasets
 const useDataset = create<DatasetState>((set, get) => ({
   dataset: initialDataset,
   datasets: initialDatasets,
-  setDataset: (dataset: Dataset) => {
+  setDataset: (dataset: Dataset, index?: number) => {
+    if (index) {
+      if (!dataset) {
+        return "no dataset";
+      }
+      // 把dataset插入到index位置
+      const datasets = get().datasets;
+      datasets.splice(index, 0, dataset);
+      // console.log(datasets);
+      set({ datasets });
+      localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
+      return "add";
+    }
     const datasets = get().datasets;
-    const index = datasets.findIndex((item) => item.id === dataset.id);
+    index = datasets.findIndex((item) => item.id === dataset.id);
     if (index === -1) {
       datasets.push(dataset);
     } else {
@@ -55,10 +75,29 @@ const useDataset = create<DatasetState>((set, get) => ({
     localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
     return index === -1 ? "add" : "update";
   },
-  removeDataset: (dataset?: Dataset) => {
-    const datasets = get().datasets.filter((d) => d.id !== dataset?.id);
+  removeDataset: (dataset?: Dataset): Result => {
+    if (!dataset) {
+      return {
+        success: false,
+        message: "no dataset",
+      };
+    }
+    const index = get().datasets.findIndex(d => d.id === dataset?.id);
+    if (index <= 1) {
+      return {
+        success: false,
+        message: "not found",
+      };
+    }
+    const datasets = get().datasets;
+    datasets.splice(index, 1);
     set(() => ({ datasets }));
     localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
+    return {
+      success: true,
+      message: "success",
+      data: index,
+    };
   },
   activeDataset: (dataset: Dataset) => {
     localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVE, dataset.id.toString());

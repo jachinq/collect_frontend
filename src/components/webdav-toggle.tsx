@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils"
 import useWebDav from "@/store/webdavutils"
 import { Textarea } from "./ui/textarea"
@@ -37,7 +37,7 @@ export const WebDavToggle = () => {
   useEffect(() => {
     // 如果有配置webdav服务器
     if (client && !initialized) {
-      console.log("has webdav client, start sync" );
+      console.log("has webdav client, start sync");
       // 监听有内容修改，自动同步到 webdav
       startSync(syncData);
       // 每次启动时，自动从服务器同步一次数据，放到微队列中，避免阻塞主进程
@@ -66,16 +66,10 @@ export const WebDavToggle = () => {
     const ok = await syncData(data);
     console.log("sync to webdav", ok, data);
     if (ok) {
-      toast({
-        title: "成功",
-        description: "同步至服务器",
-      });
+      toast.success("同步至服务器");
       setOpen(false);
     } else {
-      toast({
-        title: "同步失败",
-        description: "同步失败",
-      });
+      toast.error("同步失败");
     }
 
   }
@@ -97,16 +91,10 @@ export const WebDavToggle = () => {
       // if (datasets && datasets.length > 0) {
       //   // activeDataset(datasets[0]);
       // }
-      toast({
-        title: "同步成功",
-        description: "同步成功",
-      });
+      toast.success("同步成功");
       setOpen(false);
     } else {
-      toast({
-        title: "同步失败",
-        description: "同步失败",
-      });
+      toast.error("同步失败");
     }
   }
 
@@ -180,15 +168,10 @@ const ProfileForm = ({ className, setOpen }:
     console.log(data);
     const saveData = { ...data };
 
-    toast({
-      title: "Data saved:",
-      description: (
-        <pre>
-          <code>
-            {JSON.stringify(saveData, null, 2)}
-          </code>
-        </pre>
-      ),
+    toast.success("Config saved", {
+      description: <pre className="whitespace-pre-wrap">
+        {JSON.stringify(saveData, null, 2)}
+      </pre>
     })
 
     setClientOptions(saveData);
@@ -260,15 +243,9 @@ const ProfileForm = ({ className, setOpen }:
           const result = await testConnection();
           console.log(result);
           if (result) {
-            toast({
-              title: "连接成功",
-              description: "连接成功",
-            });
+            toast.success("连接成功");
           } else {
-            toast({
-              title: "连接失败",
-              description: "连接失败",
-            });
+            toast.error("连接失败");
           }
         }}>测试连接</Button>
       </form>

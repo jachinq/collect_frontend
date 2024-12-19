@@ -1,4 +1,4 @@
-import { Collect } from "@/const/def";
+import { Collect, Result } from "@/const/def";
 import { create } from "zustand";
 
 const jsonData: Collect[] = [
@@ -31,8 +31,8 @@ interface PageState {
   // pageList: any[];
   // setPageList: (list: any[]) => void;
   getPageList: () => any[];
-  setPageItem: (item: any) => string;
-  delPageItem: (item: any) => string;
+  setPageItem: (item: Collect, index?: number) => string;
+  delPageItem: (item: any) => Result;
 
   filterText: string;
   setFilterText: (text: string) => void;
@@ -72,9 +72,20 @@ const usePage = create<PageState>((set, get) => ({
     const end = start + pageSize;
     return get().filterList.slice(start, end);
   },
-  setPageItem: (item) => {
+  setPageItem: (item: Collect, index?: number): string => {
     const { allList } = get();
-    const index = allList.findIndex((i) => i.id === item.id);
+
+    if (index) {
+      if (!item) {
+        return "no collet";
+      }
+      allList.splice(index, 0, item);
+      set({ allList });
+      localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(allList));
+      return "add";
+    }
+
+    index = allList.findIndex((i) => i.id === item.id);
     if (index === -1) {
       allList.unshift(item);
     } else {
@@ -87,19 +98,30 @@ const usePage = create<PageState>((set, get) => ({
     localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(allList));
     return index === -1 ? "add" : "update";
   },
-  delPageItem: (item) => {
+  delPageItem: (item): Result => {
     if (item === null || item === undefined) {
-      return "not found";
+      return {
+        success: false,
+        message: "not collet item"
+      };
     }
     const { allList } = get();
     const index = allList.findIndex((i) => i.id === item.id);
-    if (index > -1) {
-      allList.splice(index, 1);
-      set({ allList });
+    if (index <= 0) {
+      return {
+        success: false,
+        message: "not found"
+      };
     }
+    allList.splice(index, 1);
+    set({ allList });
     get().setTotal(allList.length); // 更新总数
     localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(allList));
-    return index > -1 ? "del" : "not found";
+    return {
+      success: true,
+      message: "delete success",
+      data: index
+    };
   },
 
   filterText: "",
@@ -129,10 +151,10 @@ const usePage = create<PageState>((set, get) => ({
       const searchAll = Object.keys(filterFiled).length === 0;
       const filterList = get().allList.filter((item: Collect) => {
         if (searchAll) {
-          return item?.name?.toLowerCase().includes(filterText) || 
-          item?.url?.toLowerCase().includes(filterText) || 
-          item?.description?.toLowerCase().includes(filterText) || 
-          item?.tags?.join(",").toLowerCase().includes(filterText);
+          return item?.name?.toLowerCase().includes(filterText) ||
+            item?.url?.toLowerCase().includes(filterText) ||
+            item?.description?.toLowerCase().includes(filterText) ||
+            item?.tags?.join(",").toLowerCase().includes(filterText);
         }
 
         if (filterFiled.tags) {
@@ -150,7 +172,7 @@ const usePage = create<PageState>((set, get) => ({
         }
         return true;
       });
-      
+
       set({ filterList });
       get().setTotal(filterList.length); // 更新总数
       get().setPage(1); // 重置页码到第一页
@@ -163,7 +185,7 @@ const usePage = create<PageState>((set, get) => ({
     // console.log("filter time:", new Date().getTime() - cost);
   },
   getFilterText: () => get().filterText,
-  saveCollectLocal: (collectList=[]) => {
+  saveCollectLocal: (collectList = []) => {
     localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(collectList));
     console.log("save collect local:", collectList);
   }

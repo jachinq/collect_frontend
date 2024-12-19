@@ -23,3 +23,9 @@ export const DEFAULT_COLLECT: Collect = {
   create: new Date().toLocaleDateString(),
   update: new Date().toLocaleDateString(),
 };
+
+export interface Result {
+  success: boolean;
+  message: string;
+  data?: any;
+}
