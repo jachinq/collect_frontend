@@ -4,7 +4,6 @@ import { Settings } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog"
 import { ScrollArea } from "./ui/scroll-area"
 import { useMediaQuery } from "@uidotdev/usehooks"
-import { Collect } from "@/const/def"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -15,19 +14,18 @@ import useWebDav from "@/store/webdavutils"
 import { Textarea } from "./ui/textarea"
 import { Input } from "./ui/input"
 import { Confirm } from "./confirm"
-import usePage from "@/store/page"
-import useDataset, { defaultDatasets, Dataset } from "@/store/dataset"
-import useSyncList from "@/store/syncList"
+import { useSync } from "@/hooks/use-sync"
+import { Switch } from "./ui/switch"
+import useConfig from "@/store/config"
 
 export const WebDavToggle = () => {
   const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
-  const { initialized, setInitialized, client, syncData, readData, buildClient, clientOptions } = useWebDav();
+  const { initialized, setInitialized, client, buildClient, clientOptions, checkCanSync } = useWebDav();
   const [open, setOpen] = useState(false)
-  const { allList, initPage, saveCollectLocal } = usePage();
-  const { datasets, activeDataset, saveDatasetLocal } = useDataset();
+  const { handleSyncToWebDav, handleSyncFromWebDav } = useSync();
+  const { config, setConfig } = useConfig();
 
-  const { startSync } = useSyncList();
   useEffect(() => {
     if (client == null) {
       buildClient(clientOptions);
@@ -37,62 +35,34 @@ export const WebDavToggle = () => {
   useEffect(() => {
     // 如果有配置webdav服务器
     if (client && !initialized) {
-      console.log("has webdav client, start sync");
-      // 监听有内容修改，自动同步到 webdav
-      startSync(syncData);
+
+      checkCanSync();
+
       // 每次启动时，自动从服务器同步一次数据，放到微队列中，避免阻塞主进程
       // 如果是第一次启动，或者距离上次同步时间超过1min，则同步一次数据
       const syncTimeString = localStorage.getItem("syncTime");
       const syncTime: number = syncTimeString ? parseInt(syncTimeString, 10) : 0;
       const now = new Date().getTime();
       if (now - syncTime > 1000 * 60) {
-        handleSyncFromWebDav();
-        localStorage.setItem("syncTime", now.toString());
+        console.log("has webdav client, start sync");
+        handleSyncFromWebDav().then(ok => {
+          if (ok) {
+            toast.success("成功拉取最新数据");
+          } else {
+            toast.error("拉取最新数据失败");
+          }
+        }).catch(e => {
+          toast.error("拉取最新数据失败", e.message);
+        });
       }
       setInitialized(true);
     }
   }, [client]);
 
-  const handleSyncToWebDav = async () => {
-    // 实现同步功能
-    let datasetsSave = datasets;
-    if (datasets === undefined || activeDataset === undefined) {
-      datasetsSave = defaultDatasets;
-    }
-    const data = {
-      datasets: datasetsSave,
-      collectList: allList,
-    }
-    const ok = await syncData(data);
-    console.log("sync to webdav", ok, data);
+  const handleSync = async (syncFunc: () => Promise<boolean>) => {
+    const ok = await syncFunc();
     if (ok) {
-      toast.success("同步至服务器");
-      setOpen(false);
-    } else {
-      toast.error("同步失败");
-    }
-
-  }
-
-  const handleSyncFromWebDav = async () => {
-    // 实现从 WebDav 同步功能
-    const data: {
-      datasets: Dataset[],
-      collectList: Collect[]
-    } = await readData();
-    console.log("sync from webdav", data);
-    if (data) {
-      const { datasets = defaultDatasets, collectList = [] } = data;
-      // console.log(datasets, collectList);
-      saveCollectLocal(collectList);
-      saveDatasetLocal(datasets);
-
-      initPage();
-      // if (datasets && datasets.length > 0) {
-      //   // activeDataset(datasets[0]);
-      // }
       toast.success("同步成功");
-      setOpen(false);
     } else {
       toast.error("同步失败");
     }
@@ -123,11 +93,23 @@ export const WebDavToggle = () => {
                 <>
                   <h2 className="pl-6 text-lg font-bold mb-4">数据同步</h2>
                   <div className="px-6 mb-4 flex gap-2">
-
-
-                    <Confirm title="警告" message="此操作将会将本地的数据同步至 WebDav 服务器，确定执行吗？" onConfirm={handleSyncToWebDav} trigger={(<Button variant="ghost">同步至 WebDav</Button>)} />
-                    <Confirm title="警告" message="此操作将会从 WebDav 服务器同步数据覆盖本地数据，确定执行吗？" onConfirm={handleSyncFromWebDav} trigger={(<Button variant="ghost">从 WebDav 同步</Button>)} />
+                    <Confirm title="警告" message="此操作将会将本地的数据同步至 WebDav 服务器，确定执行吗？" onConfirm={() => handleSync(handleSyncToWebDav)} trigger={(<Button variant="ghost">同步至 WebDav</Button>)} />
+                    <Confirm title="警告" message="此操作将会从 WebDav 服务器同步数据覆盖本地数据，确定执行吗？" onConfirm={() => handleSync(handleSyncFromWebDav)} trigger={(<Button variant="ghost">从 WebDav 同步</Button>)} />
                   </div>
+                  <div className="px-6 mb-4 grid grid-cols-1 gap-2" >
+                    <div>自动同步</div>
+                    <div className="text-[0.8rem] text-muted-foreground">
+                      是否开启自动同步，开启后会自动将本地的修改同步到 webdav 服务器，关闭后则需要手动点击右上角按钮进行同步（当数据有变化时）
+                    </div>
+                    <Switch defaultChecked={config.autoSync} onCheckedChange={(value) => setConfig({...config, autoSync: value })} ></Switch>
+                  </div>
+                  { config.autoSync && <div className="px-6 mb-4 grid grid-cols-1 gap-2" >
+                    <div>自动同步间隔</div>
+                    <div className="text-[0.8rem] text-muted-foreground">
+                      自动同步的间隔时间，单位为豪秒
+                    </div>
+                    <Input defaultValue={config.autoSyncInterval} onChange={(e) => setConfig({...config, autoSyncInterval: parseInt(e.target.value)})} />
+                  </div>}
                 </>
               )
             }

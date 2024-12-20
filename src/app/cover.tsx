@@ -2,9 +2,9 @@ import cover from "@/assets/cover.webp";
 import { useEffect, useRef, useState } from "react";
 
 import { Collect } from "@/const/def";
-import usePage from "@/store/page";
+import usePage from "@/store/collect-list";
 import { Skeleton } from "@/components/ui/skeleton";
-import useSyncList from "@/store/syncList";
+import useSyncList, { SyncEventType } from "@/store/syncList";
 
 export const Cover = ({ item }: any) => {
 
@@ -35,12 +35,12 @@ export const Cover = ({ item }: any) => {
 
   const handleOpenUrl = (item: Collect) => {
     item.open = (item.open || 0) + 1;
-    const success = setPageItem(item) === "update";
-    if (success) {
+    const result = setPageItem(item);
+    if (result.success && result.message === "update") {
       window.open(item.url, "_blank");
-      addSyncTask(item);
+      addSyncTask({ type: SyncEventType.SET_COLLECT, item });
     }
-    
+
   }
 
   return (

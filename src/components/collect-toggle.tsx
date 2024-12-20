@@ -14,9 +14,9 @@ import { z } from "zod"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { toast } from "sonner";
 import { DialogDescription } from "@radix-ui/react-dialog";
-import usePage from "@/store/page";
+import usePage from "@/store/collect-list";
 import { Collect, DEFAULT_COLLECT } from "@/const/def";
-import useSyncList from "@/store/syncList";
+import useSyncList, { SyncEventType } from "@/store/syncList";
 
 interface Config {
   title: string
@@ -36,10 +36,10 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
   const { addSyncTask } = useSyncList();
 
   if (isDel) {
-    const onDel = (collect: any) => {
+    const onDel = (collect: Collect) => {
       const result = delPageItem(collect);
       if (result.success) {
-        addSyncTask(collect || {});
+        addSyncTask({type: SyncEventType.DEL_COLLECT, item: collect});
         toast.success("删除成功", {
           duration: 10000,
           action: {
@@ -47,7 +47,7 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
             onClick: () => {
               console.log('Undo delete collect', 'index=', result.data, 'delete item=', collect);
               setPageItem(collect, result.data);
-              addSyncTask(collect);
+              addSyncTask({type: SyncEventType.UNDO_DEL_COLLECT, item: collect, undoIndex: result.data});
             }
           }
         });
@@ -69,7 +69,7 @@ export const CollectToggle = ({ edit = false, isDel = false, collect, className,
           <PopoverClose asChild>
             <div>
               <Button variant="secondary" className='mr-2'>取消</Button>
-              <Button variant="destructive" onClick={() => onDel(collect)}>确定</Button>
+              <Button variant="destructive" onClick={() => onDel(collect as any)}>确定</Button>
             </div>
           </PopoverClose>
         </div>
@@ -161,10 +161,12 @@ export const ProfileForm = ({ className, collect, setOpen }: React.ComponentProp
       ...data,
       tags: data?.tags?.split("\n") || []
     };
+    let syncType = SyncEventType.SET_COLLECT;
     if (saveData.id === -1) {
       // 找到最大id + 1
       const maxId = Math.max(...getPageList().map(c => c.id))
       saveData.id = maxId + 1;
+      syncType = SyncEventType.ADD_COLLECT;
     }
     console.log(saveData);
     toast.success("Collect saved:", {
@@ -174,7 +176,7 @@ export const ProfileForm = ({ className, collect, setOpen }: React.ComponentProp
     })
 
     setPageItem(saveData)
-    addSyncTask(saveData);
+    addSyncTask({type: syncType, item: saveData});
     setOpen(false)
   };
 

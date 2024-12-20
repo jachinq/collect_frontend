@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar"
 import useDataset, { Dataset } from "@/store/dataset";
 import { DatasetToggle } from "./dataset-toggle";
-import usePage from "@/store/page";
+import usePage from "@/store/collect-list";
 import { Separator } from "./ui/separator";
 import { cn } from "@/lib/utils";
 

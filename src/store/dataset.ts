@@ -36,10 +36,15 @@ export const DEFAULT_DATASET = {
   filterText: "",
 };
 
+const setLocalStorage = (item: DatasetState | any, set: (arg: any) => void) => {
+  localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(item.datasets));
+  set && set({ ...item });
+};
+
 interface DatasetState {
   dataset: Dataset,
   datasets: Dataset[],
-  setDataset: (dataset: Dataset, index?: number) => string,
+  setDataset: (dataset: Dataset, index?: number) => Result,
   removeDataset: (dataset?: Dataset) => Result,
   activeDataset: (dataset: Dataset) => void,
   saveDatasetLocal: (datasets: Dataset[]) => void,
@@ -51,19 +56,18 @@ const initialDataset: Dataset = initialDatasets[datasetIndex] || initialDatasets
 const useDataset = create<DatasetState>((set, get) => ({
   dataset: initialDataset,
   datasets: initialDatasets,
-  setDataset: (dataset: Dataset, index?: number) => {
+  setDataset: (dataset: Dataset, index?: number): Result => {
     if (index) {
       if (!dataset) {
-        return "no dataset";
+        return { success: false, message: "no dataset" };
       }
       // 把dataset插入到index位置
       const datasets = get().datasets;
       datasets.splice(index, 0, dataset);
-      // console.log(datasets);
-      set({ datasets });
-      localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
-      return "add";
+      setLocalStorage(get(), set);
+      return { success: true, message: "add" };
     }
+
     const datasets = get().datasets;
     index = datasets.findIndex((item) => item.id === dataset.id);
     if (index === -1) {
@@ -71,9 +75,8 @@ const useDataset = create<DatasetState>((set, get) => ({
     } else {
       datasets[index] = dataset;
     }
-    set({ datasets });
-    localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
-    return index === -1 ? "add" : "update";
+    setLocalStorage(get(), set);
+    return { success: true, message: index === -1 ? "add" : "update" };
   },
   removeDataset: (dataset?: Dataset): Result => {
     if (!dataset) {
@@ -91,8 +94,7 @@ const useDataset = create<DatasetState>((set, get) => ({
     }
     const datasets = get().datasets;
     datasets.splice(index, 1);
-    set(() => ({ datasets }));
-    localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
+    setLocalStorage(get(), set);
     return {
       success: true,
       message: "success",
@@ -104,7 +106,7 @@ const useDataset = create<DatasetState>((set, get) => ({
     set(() => ({ dataset }));
   },
   saveDatasetLocal: (datasets: Dataset[]) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY_LIST, JSON.stringify(datasets));
+    setLocalStorage({ datasets }, set);
   },
 }));
 export default useDataset;

@@ -1,4 +1,4 @@
-import { createClient } from "webdav";
+import { createClient, FileStat, WebDAVClient } from "webdav";
 import { create } from "zustand";
 
 const file_path = "collect_v2.json";
@@ -66,7 +66,7 @@ const buildClient = ({ url, user, pwd }: ClientOptions): any | null => {
 
 
 // 测试连接
-const testConnection = async (client: any | null): Promise<boolean> => {
+const testConnection = async (client: WebDAVClient | null): Promise<boolean> => {
   if (!client) {
     // console.log("client is null or undefined");
     return false;
@@ -75,7 +75,7 @@ const testConnection = async (client: any | null): Promise<boolean> => {
 };
 
 // 读取数据
-const readData = async (client: any): Promise<any> => {
+const readData = async (client: WebDAVClient): Promise<any> => {
   const exist = await client.exists(file_path);
   if (exist) {
     const contents = await client.getFileContents(file_path);
@@ -96,7 +96,7 @@ const readData = async (client: any): Promise<any> => {
 }
 
 // 新增数据
-const syncData = async (client: any, data: any): Promise<boolean> => {
+const syncData = async (client: WebDAVClient, data: any): Promise<boolean> => {
   if (!data) {
     console.log("no data to save");
     return false;
@@ -104,6 +104,18 @@ const syncData = async (client: any, data: any): Promise<boolean> => {
 
   const ok = await client.putFileContents(file_path, JSON.stringify(data));
   return ok;
+}
+
+const checkFile = async (client: WebDAVClient): Promise<FileStat> => {
+  const stat = await client.stat(file_path) as FileStat;
+  // const { lastmod } = stat;
+  // const now = new Date().getTime();
+  // const diff = now - new Date(lastmod).getTime();
+  // if (diff > 1000 * 60 * 60 * 24) { // 超过1天，认为文件过期
+  //   console.log("webdav file is expired, need to update");
+  //   return false;
+  // }
+  return stat;
 }
 
 interface WebDavState {
@@ -116,6 +128,7 @@ interface WebDavState {
   testConnection: () => Promise<boolean>;
   readData: () => Promise<any>;
   syncData: (data?: any) => Promise<boolean>;
+  checkCanSync: () => Promise<boolean>; // 检查是否可以同步数据至服务器
 }
 
 const useWebDav = create<WebDavState>((set, get) => ({
@@ -171,6 +184,22 @@ const useWebDav = create<WebDavState>((set, get) => ({
 
       const ok = await syncData(client, data);
       return ok;
+    }
+    return false;
+  },
+  checkCanSync: async () => { 
+    const client = get().client;
+    if (client) {
+      const stat = await checkFile(client);
+      const { lastmod } = stat;
+      const serverTime = new Date(lastmod).getTime();      
+      const localTime = localStorage.getItem("local_opt_time") || ""; // 获取本地操作时间
+      let localTimeNum = 0;
+      if (localTime !== "") {
+        localTimeNum = new Date(localTime).getTime();
+      }
+
+      return serverTime < localTimeNum; // 服务器时间比本地时间早，说明本地数据可以安全覆盖到服务器
     }
     return false;
   }

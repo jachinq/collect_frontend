@@ -2,7 +2,7 @@ import { Tag } from "@/components/tag";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 // import { Cover } from "./cover";
 import "@/styles/data-card.css";
-import usePage from "@/store/page";
+import usePage from "@/store/collect-list";
 import { CollectToggle } from "@/components/collect-toggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DeleteIcon, EditIcon, MoreHorizontal } from "lucide-react";

@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input"
-import usePage from "@/store/page"
+import usePage from "@/store/collect-list"
 
 export const Filter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const { filterText, setFilterText } = usePage();

@@ -15,7 +15,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from "sonner";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import useDataset, { Dataset, DEFAULT_DATASET } from "@/store/dataset";
-import useSyncList from "@/store/syncList";
+import useSyncList, { SyncEventType } from "@/store/syncList";
 
 interface Config {
   title: string
@@ -28,11 +28,11 @@ export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HT
 
   if (isDel) {
 
-    const onDel = (item: any) => {
+    const onDel = (item: Dataset) => {
       const result = removeDataset(item);
       console.log("del dataset", result);
       if (result.success) {
-        addSyncTask(item);
+        addSyncTask({type: SyncEventType.DEL_DATASET, item});
         toast.success("删除成功", {
           duration: 10000,
           action: {
@@ -40,7 +40,7 @@ export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HT
             onClick: () => {
               console.log('Undo delete dataset', 'index=', result.data, 'delete item=', item);
               setDataset(item, result.data);
-              addSyncTask(item);
+              addSyncTask({type: SyncEventType.UNDO_DEL_DATASET, item, undoIndex: result.data});
             }
           },
         });
@@ -62,7 +62,7 @@ export const DatasetToggle = ({ edit = false, isDel = false, dataset }: React.HT
           <PopoverClose asChild>
             <div>
               <Button variant="secondary" size="sm" className='mr-2'>取消</Button>
-              <Button variant="destructive" size="sm" onClick={() => { onDel(dataset) }}>确定</Button>
+              <Button variant="destructive" size="sm" onClick={() => { onDel(dataset as any) }}>确定</Button>
             </div>
           </PopoverClose>
         </div>
@@ -152,11 +152,13 @@ export const ProfileForm = ({ className, dataset, setOpen }:
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     const saveData: Dataset = { ...DEFAULT_DATASET, ...dataset, ...data };
+    let syncType = SyncEventType.SET_DATASET;
     if (saveData?.id === null || saveData?.id === undefined
       || (saveData?.id && saveData?.id <= 0)) {
       // 找到最大id + 1
       const maxId = Math.max(...datasets.map(c => c.id)) || datasets.length;
       saveData.id = maxId + 1;
+      syncType = SyncEventType.ADD_DATASET;
     }
 
     toast.success("Dataset saved", {
@@ -166,7 +168,7 @@ export const ProfileForm = ({ className, dataset, setOpen }:
     })
 
     setDataset(saveData);
-    addSyncTask(saveData);
+    addSyncTask({type: syncType, item: saveData});
     setOpen(false);
   };
 

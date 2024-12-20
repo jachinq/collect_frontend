@@ -2,14 +2,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Collect } from '@/const/def';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Accordion, AccordionItem, AccordionContent, AccordionTrigger } from '@/components/ui/accordion';
-import usePage from '@/store/page';
+import usePage from '@/store/collect-list';
 import { CollectToggle } from '@/components/collect-toggle';
 // import { Cover } from "@/app/cover";
 import { Tag } from "@/components/tag";
-import useSyncList from '@/store/syncList';
+import useSyncList, { SyncEventType } from '@/store/syncList';
 import { RichAvatar } from './rich-avatar';
 
 interface MediaQuery {
@@ -133,25 +133,33 @@ const EditableTable = () => {
     // } 
   }, []);
 
+  const [ rowChange, setRowChange ] = useState(false);
 
   // 处理输入框的变化
   const handleChange = (row: Collect, key: string, value: string) => {
     row[key] = value;
-    row["update"] = new Date().toLocaleDateString();
     setPageItem(row);
-    addSyncTask(row);
+    setRowChange(true);
   };
+
+  // 当组件失去焦点时，处理提交
+  const onSumbit = (row: Collect) => {
+    if (!rowChange) return;
+    setRowChange(false);
+    row["update"] = new Date().toLocaleDateString();
+    addSyncTask({type: SyncEventType.SET_COLLECT, item: row});
+  }
 
   const callbackRender = (key: string, value: Collect) => {
     if (key === "tags") {
       value.update = new Date().toLocaleDateString();
       setPageItem(value);
-      addSyncTask(value);
+      addSyncTask({type: SyncEventType.SET_COLLECT, item: value});
     }
     if (key === "cover") {
       value.update = new Date().toLocaleDateString();
       setPageItem(value);
-      addSyncTask(value);
+      addSyncTask({type: SyncEventType.SET_COLLECT, item: value});
     }
   }
 
@@ -179,6 +187,7 @@ const EditableTable = () => {
                               value={row[column.key]}
                               onChange={(e) => handleChange(row, column.key, e.target.value)}
                               className='resize-none border-none px-4 py-4  bg-[hsl(var(--muted))]'
+                              onBlur={() => onSumbit(row)}
                             /> :
                             <span className='px-4 py-2'>{row[column.key]}</span>
                       }
@@ -228,6 +237,7 @@ const EditableTable = () => {
                               value={row[column.key]}
                               onChange={(e) => handleChange(row, column.key, e.target.value)}
                               className='resize-none border-none px-4 py-4'
+                              onBlur={() => onSumbit(row)}
                             /> :
                             <span>{row[column.key]}</span>
                       }
